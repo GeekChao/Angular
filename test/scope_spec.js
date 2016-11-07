@@ -490,4 +490,85 @@ describe('Scope', function(){
             expect(counter).toEqual(0);
         });
     });
+
+    describe('inheritance', function(){
+
+        it('digests its children', function(){
+            var parent = new Scope();
+            var child = parent.$new();
+
+            parent.aValue = 'abc';
+            child.$watch(
+                function(scope) { return scope.aValue; },
+                function(newValue, oldValue, scope){
+                    scope.aValueWas = newValue;
+                }
+            );
+
+            parent.$digest();
+            expect(child.aValueWas).toBe('abc');
+        });
+
+        it('schedules a digest from root on $evalAsync', function(done){
+            var parent = new Scope();
+            var child = parent.$new();
+            var child2 = child.$new();
+
+            parent.aValue = 'abc';
+            parent.counter = 0;
+            parent.$watch(
+                function(scope) { return scope.aValue; },
+                function(newValue, oldValue, scope){
+                    scope.counter++;
+                }
+            );
+
+            child2.$evalAsync(function(scope) {});
+
+            setTimeout(function() {
+                expect(parent.counter).toBe(1);
+                done();
+            }, 50);
+        });
+
+        it('executes $applyAsync functions on isolated scope', function(){
+            var parent = new Scope();
+            var child = parent.$new(true);
+            var applied = false;
+
+            parent.$applyAsync(function() {
+                applied = true;
+            });
+
+            child.$digest();
+            expect(applied).toBe(true);
+        });
+
+        it('is no longer digested when $destory has been called', function(){
+            var parent = new Scope();
+            var child = parent.$new();
+
+            child.aValue = [1, 2, 3];
+            child.counter = 0;
+            child.$watch(
+                function(scope) { return scope.aValue; },
+                function(newValue, oldValue, scope){
+                    scope.counter++;
+                },
+                true
+            );
+
+            parent.$digest();
+            expect(child.counter).toBe(1);
+
+            child.aValue.push(4);
+            parent.$digest();
+            expect(child.counter).toBe(2);
+
+            child.$destory();
+            child.aValue.push(5);
+            parent.$digest();
+            expect(child.counter).toBe(2);                        
+        });
+    });
 });

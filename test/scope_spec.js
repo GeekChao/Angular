@@ -571,4 +571,63 @@ describe('Scope', function(){
             expect(child.counter).toBe(2);                        
         });
     });
+
+    describe('$watchCollection', function(){
+        var scope;
+
+        beforeEach(function(){
+            scope = new Scope();
+        });
+
+        it('works like a normal watch for non-collections', function(){
+            var valueProvided; 
+
+            scope.aValue = 42;
+            scope.counter = 0;
+
+            scope.$watchCollection(
+                function(scope){ return scope.aValue; },
+                function(newValue, oldValue, scope){
+                    valueProvided = newValue;
+                    scope.counter++;
+                }
+            );
+
+            scope.$digest();
+            expect(scope.counter).toBe(1);
+            expect(valueProvided).toBe(scope.aValue);
+
+            scope.aValue = 43;
+            scope.$digest();
+            expect(scope.counter).toBe(2);
+
+            scope.$digest();
+            expect(scope.counter).toBe(2);
+        });
+        
+        it('notices an item replaced in an arguments object', function() {
+            (function() {
+                scope.arrayLike = arguments;
+            })(1, 2, 3);
+            scope.counter = 0;
+
+            scope.$watchCollection(
+                function(scope) { return scope.arrayLike; },
+                function(newValue, oldValue, scope) {
+                scope.counter++;
+                }
+            );
+
+            scope.$digest();
+            expect(scope.counter).toBe(1);
+
+            scope.arrayLike[1] = 42;
+            scope.$digest();
+            expect(scope.counter).toBe(2);
+
+            scope.$digest();
+            expect(scope.counter).toBe(2);
+        });
+        
+    });
 });

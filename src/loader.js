@@ -12,14 +12,22 @@ function setUpModuleLoader(window){
             throw 'hasOwnProperty is not a vaild module name';
         }
         var invokeQueue = [];
+
+        var invokeLater = function(method){
+            return function(){
+                invokeQueue.push([method, arguments]);
+                return moduleInstance;
+            };
+        };
+
         var moduleInstance = {
             name : name,
             requires: requires,
-            constant: function(key, value){
-                invokeQueue.push(['constant', [key, value]]);
-            },
+            constant: invokeLater('constant'),
+            provider: invokeLater('provider'),
             _invokeQueue: invokeQueue   
         };
+
         modules[name] = moduleInstance;
         return moduleInstance;
     };

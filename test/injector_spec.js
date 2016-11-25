@@ -156,5 +156,112 @@ describe('injector', function(){
         injector.get('aProvider');
         }).toThrow();
     });
+
+    it('allows registering config blocks before providers', function(){
+        var module = window.angular.module('myModule', []);
+
+        module.config(function(aProvider){});
+        module.provider('a', function(){
+            this.$get = _.constant(42);
+        });
+
+        var injector = createInjector(['myModule']);
+        
+        expect(injector.get('a')).toBe(42);
+    });
+
+    it('runs a config block added during module registration', function(){
+        var module = window.angular.module('myModule', [], function($provide){
+            $provide.constant('a', 42);
+        });
+
+        var injector = createInjector(['myModule']);
+
+        expect(injector.get('a')).toBe(42);
+    });
+
+    it('injects run blocks with the instance injector', function(){
+        var module = window.angular.module('myModule', []);
+
+        module.provider('a', {$get: _.constant(42)});
+
+        var gotA;
+        module.run(function(a){
+            gotA = a;
+        });
+
+        createInjector(['myModule']);
+
+        expect(gotA).toBe(42);
+    });
+
+    it('supports returning a run block from a function module', function(){
+        var result;
+        var functionModule = function($provide){
+            $provide.constant('a', 42);
+            return function(a){
+                result = a;
+            };
+        };
+
+        window.angular.module('myModule', [functionModule]);
+
+        createInjector(['myModule']);
+
+        expect(result).toBe(42);
+    });
+
+    it('injects a factory function with instances', function() {
+        var module = window.angular.module('myModule', []);
+
+        module.factory('a', function() { return 1; });
+        module.factory('b', function(a) { return a + 2; });
+
+        var injector = createInjector(['myModule']);
+
+        expect(injector.get('b')).toBe(3);
+    });
+
+    it('does not make values available to config blocks', function() {
+        var module = window.angular.module('myModule', []);
+
+        module.value('a', 42);
+        module.config(function(a) {
+        });
+
+        expect(function() {
+        createInjector(['myModule']);
+        }).toThrow();
+
+    });
+
+    it('injects service constructors with instances', function() {
+        var module = window.angular.module('myModule', []);
+
+        module.value('theValue', 42);
+        module.service('aService', function MyService(theValue) {
+        this.getValue = function() { return theValue; };
+        });
+
+        var injector = createInjector(['myModule']);
+
+        expect(injector.get('aService').getValue()).toBe(42);
+    });
+
+    it('uses dependency injection with decorators', function() {
+        var module = window.angular.module('myModule', []);
+        module.factory('aValue', function() {
+        return {};
+        });
+        module.constant('a', 42);
+        module.decorator('aValue', function(a, $delegate) {
+        $delegate.decoratedKey = a;
+        });
+
+        var injector = createInjector(['myModule']);
+
+        expect(injector.get('aValue').decoratedKey).toBe(42);
+    });
+    
 });
 
